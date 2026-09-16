@@ -1,19 +1,21 @@
-name: Flutter CI
+name: Flutter CI/CD
 
 on:
   push:
     branches:
       - main
       - develop
+      - staging
 
   pull_request:
     branches:
       - main
       - develop
+      - staging
 
 jobs:
-  flutter-ci:
-    name: Flutter Analyze, Test & Build
+  build:
+    name: Build Flutter App
     runs-on: ubuntu-latest
 
     steps:
@@ -39,11 +41,29 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      - name: Build DEV APK
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          flutter build apk \
+            --flavor dev \
+            --release \
+            --dart-define=ENVIRONMENT=dev
+
+      - name: Build STAGING APK
+        if: github.ref == 'refs/heads/staging'
+        run: |
+          flutter build apk \
+            --flavor staging \
+            --release \
+            --dart-define=ENVIRONMENT=staging
+
       - name: Decode Android keystore
+        if: github.ref == 'refs/heads/main'
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/upload-keystore.jks
 
       - name: Create key.properties
+        if: github.ref == 'refs/heads/main'
         run: |
           cat > android/key.properties <<EOF
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
@@ -52,11 +72,31 @@ jobs:
           storeFile=upload-keystore.jks
           EOF
 
-      - name: Build signed Android App Bundle
-        run: flutter build appbundle --release
+      - name: Build PROD AAB
+        if: github.ref == 'refs/heads/main'
+        run: |
+          flutter build appbundle \
+            --flavor prod \
+            --release \
+            --dart-define=ENVIRONMENT=prod
 
-      - name: Upload AAB
+      - name: Upload DEV APK
+        if: github.ref == 'refs/heads/develop'
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-release-aab
-          path: build/app/outputs/bundle/release/app-release.aab
+          name: flutter-dev-apk
+          path: build/app/outputs/flutter-apk/app-dev-release.apk
+
+      - name: Upload STAGING APK
+        if: github.ref == 'refs/heads/staging'
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-staging-apk
+          path: build/app/outputs/flutter-apk/app-staging-release.apk
+
+      - name: Upload PROD AAB
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-prod-aab
+          path: build/app/outputs/bundle/prodRelease/app-prod-release.aab

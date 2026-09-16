@@ -16,14 +16,39 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    signingConfigs {
-    create("release") {
-        keyAlias = keystoreProperties["keyAlias"] as String?
-        keyPassword = keystoreProperties["keyPassword"] as String?
-        storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-        storePassword = keystoreProperties["storePassword"] as String?
+
+    flavorDimensions += "environment"
+
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+        }
+
+        create("staging") {
+            dimension = "environment"
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+        }
+
+        create("prod") {
+            dimension = "environment"
+        }
     }
-}
+
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String?
+            keyPassword = keystoreProperties["keyPassword"] as String?
+            storeFile = keystoreProperties["storeFile"]?.let {
+                val f = file(it)
+                if (f.exists()) f else rootProject.file("../$it")
+            }
+            storePassword = keystoreProperties["storePassword"] as String?
+        }
+    }
+
     namespace = "com.example.flutter_cicd_demo"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
@@ -49,15 +74,8 @@ android {
     }
 
     buildTypes {
-        buildTypes {
-    release {
-        signingConfig = signingConfigs.getByName("release")
-    }
-}
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
