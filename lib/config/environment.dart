@@ -1,5 +1,4 @@
-enum AppEnvironment { dev, staging, prod 
-}
+enum AppEnvironment { dev, staging, prod }
 
 class EnvironmentConfig {
   static const String _environment = String.fromEnvironment(
