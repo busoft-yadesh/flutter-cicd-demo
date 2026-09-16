@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       home: Scaffold(
         body: Center(
-          child: Text('Environment: ${EnvironmentConfig.current.name}'),
+          child: Text(' Hi \n Environment: ${EnvironmentConfig.current.name}'),
         ),
       ),
     );
