@@ -1,0 +1,58 @@
+name: Flutter Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Release Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.9"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze code
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build staging APK
+        run: |
+          flutter build apk \
+            --flavor staging \
+            --release \
+            --dart-define=ENVIRONMENT=staging
+
+      - name: Rename APK
+        run: |
+          cp build/app/outputs/flutter-apk/app-staging-release.apk \
+             flutter-cicd-demo-staging-${{ github.ref_name }}.apk
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            "flutter-cicd-demo-staging-${{ github.ref_name }}.apk" \
+            --title "Flutter CI Demo ${{ github.ref_name }}" \
+            --generate-notes
