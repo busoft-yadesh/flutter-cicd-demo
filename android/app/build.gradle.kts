@@ -17,26 +17,6 @@ if (keystorePropertiesFile.exists()) {
 
 android {
 
-    flavorDimensions += "environment"
-
-    productFlavors {
-        create("dev") {
-            dimension = "environment"
-            applicationIdSuffix = ".dev"
-            versionNameSuffix = "-dev"
-        }
-
-        create("staging") {
-            dimension = "environment"
-            applicationIdSuffix = ".staging"
-            versionNameSuffix = "-staging"
-        }
-
-        create("prod") {
-            dimension = "environment"
-        }
-    }
-
     signingConfigs {
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as String?
@@ -46,6 +26,29 @@ android {
                 if (f.exists()) f else rootProject.file("../$it")
             }
             storePassword = keystoreProperties["storePassword"] as String?
+        }
+    }
+
+    flavorDimensions += "environment"
+
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            signingConfig = signingConfigs.getByName("debug")
+        }
+
+        create("staging") {
+            dimension = "environment"
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+            signingConfig = signingConfigs.getByName("debug")
+        }
+
+        create("prod") {
+            dimension = "environment"
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -75,7 +78,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // Signing configuration is specified per product flavor
         }
     }
 }
