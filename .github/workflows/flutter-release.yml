@@ -56,3 +56,15 @@ jobs:
             "flutter-cicd-demo-staging-${{ github.ref_name }}.apk" \
             --title "Flutter CI Demo ${{ github.ref_name }}" \
             --generate-notes
+
+      - name: Notify Teams
+        if: success()
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+        run: |
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": "🚀 Flutter Staging Release ${{ github.ref_name }} is ready!\n\nEnvironment: STAGING\nBuild: Android APK\nRelease: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+            }' \
+            "$TEAMS_WEBHOOK_URL"
