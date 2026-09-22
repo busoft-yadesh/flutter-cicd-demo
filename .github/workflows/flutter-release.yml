@@ -14,9 +14,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # --------------------------------------------------
+      # 1. Checkout repository
+      # --------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # --------------------------------------------------
+      # 2. Setup Flutter
+      # --------------------------------------------------
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -24,18 +30,33 @@ jobs:
           channel: stable
           cache: true
 
+      # --------------------------------------------------
+      # 3. Install dependencies
+      # --------------------------------------------------
       - name: Install dependencies
         run: flutter pub get
 
+      # --------------------------------------------------
+      # 4. Check formatting
+      # --------------------------------------------------
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed .
 
+      # --------------------------------------------------
+      # 5. Analyze Flutter code
+      # --------------------------------------------------
       - name: Analyze code
         run: flutter analyze
 
+      # --------------------------------------------------
+      # 6. Run Flutter tests
+      # --------------------------------------------------
       - name: Run tests
         run: flutter test
 
+      # --------------------------------------------------
+      # 7. Build STAGING APK
+      # --------------------------------------------------
       - name: Build staging APK
         run: |
           flutter build apk \
@@ -43,11 +64,17 @@ jobs:
             --release \
             --dart-define=ENVIRONMENT=staging
 
+      # --------------------------------------------------
+      # 8. Rename APK
+      # --------------------------------------------------
       - name: Rename APK
         run: |
           cp build/app/outputs/flutter-apk/app-staging-release.apk \
              flutter-cicd-demo-staging-${{ github.ref_name }}.apk
 
+      # --------------------------------------------------
+      # 9. Create GitHub Release
+      # --------------------------------------------------
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -57,14 +84,76 @@ jobs:
             --title "Flutter CI Demo ${{ github.ref_name }}" \
             --generate-notes
 
+      # --------------------------------------------------
+      # 10. Notify Microsoft Teams
+      # --------------------------------------------------
       - name: Notify Teams
         if: success()
         env:
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
         run: |
-          curl -X POST \
+          response=$(curl -sS \
+            -X POST \
             -H "Content-Type: application/json" \
             -d '{
-              "text": "🚀 Flutter Staging Release ${{ github.ref_name }} is ready!\n\nEnvironment: STAGING\nBuild: Android APK\nRelease: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+              "type": "message",
+              "attachments": [
+                {
+                  "contentType": "application/vnd.microsoft.card.adaptive",
+                  "contentUrl": null,
+                  "content": {
+                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                    "type": "AdaptiveCard",
+                    "version": "1.2",
+                    "body": [
+                      {
+                        "type": "TextBlock",
+                        "text": "🚀 Flutter Staging Release Ready",
+                        "weight": "Bolder",
+                        "size": "Medium"
+                      },
+                      {
+                        "type": "FactSet",
+                        "facts": [
+                          {
+                            "title": "Environment",
+                            "value": "STAGING"
+                          },
+                          {
+                            "title": "Build",
+                            "value": "Android APK"
+                          },
+                          {
+                            "title": "Version",
+                            "value": "${{ github.ref_name }}"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "TextBlock",
+                        "text": "The staging APK has been successfully built and released.",
+                        "wrap": true
+                      },
+                      {
+                        "type": "TextBlock",
+                        "text": "GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}",
+                        "wrap": true
+                      }
+                    ]
+                  }
+                }
+              ]
             }' \
-            "$TEAMS_WEBHOOK_URL"
+            -w "\nHTTP_STATUS:%{http_code}" \
+            "$TEAMS_WEBHOOK_URL")
+
+          echo "$response"
+
+          status=$(echo "$response" | sed -n 's/.*HTTP_STATUS://p')
+
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "Teams webhook request failed with HTTP status: $status"
+            exit 1
+          fi
+
+          echo "Teams webhook request accepted with HTTP status: $status"
