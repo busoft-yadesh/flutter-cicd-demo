@@ -84,7 +84,7 @@ jobs:
             --title "Flutter CI Demo ${{ github.ref_name }}" \
             --generate-notes
 
-      # --------------------------------------------------
+            # --------------------------------------------------
       # 10. Notify Microsoft Teams
       # --------------------------------------------------
       - name: Notify Teams
@@ -133,11 +133,13 @@ jobs:
                         "type": "TextBlock",
                         "text": "The staging APK has been successfully built and released.",
                         "wrap": true
-                      },
+                      }
+                    ],
+                    "actions": [
                       {
-                        "type": "TextBlock",
-                        "text": "GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}",
-                        "wrap": true
+                        "type": "Action.OpenUrl",
+                        "title": "📦 View GitHub Release",
+                        "url": "https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
                       }
                     ]
                   }
